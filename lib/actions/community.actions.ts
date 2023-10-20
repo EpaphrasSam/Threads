@@ -1,4 +1,4 @@
- import prisma from "../connect";
+ import prisma from "../prisma";
 
 export async function createCommunity(
   id: string,

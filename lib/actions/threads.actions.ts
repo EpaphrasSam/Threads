@@ -1,7 +1,7 @@
 "use server"
 
 import { revalidatePath } from "next/cache";
-import prisma from "../connect"
+import prisma from "../prisma"
 
 interface Params {
     text: string,
