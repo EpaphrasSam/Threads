@@ -15,7 +15,8 @@ model User {
   bio                  String?
   threads              Thread[]
   onboarded            Boolean     @default(false)
-  communities          Community[] @relation("CommunityMembers")
+  communities          Community[] @relation("CommunityMembers",fields: [communitiesId], references: [id])
+  communitiesId        String[]
   communitiesCreatedBy Community[] @relation("CreatedBy")
 }
 
@@ -41,6 +42,6 @@ model Community {
   createdBy   User     @relation(name: "CreatedBy", fields: [createdById], references: [id])
   createdById String
   threads     Thread[]
-  members     User     @relation(name: "CommunityMembers", fields: [membersId], references: [id])
-  membersId   String
+  members     User[]     @relation(name: "CommunityMembers", fields: [membersId], references: [id])
+  membersId   String[]
 }

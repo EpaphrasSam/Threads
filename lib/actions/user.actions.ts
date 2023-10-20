@@ -71,7 +71,7 @@ export async function fetchUserPosts(userId: string) {
   include: {
     threads: {
       // where: {
-      //   parentId: null // Optionally, filter for parent threads only
+      //   parentId: null 
       // },
       include: {
         author: {
@@ -115,4 +115,85 @@ export async function fetchUserPosts(userId: string) {
   }
 }
 
+export async function fetchUsers({
+  userId,
+  searchString = "",
+  pageNumber = 1,
+  pageSize = 25,
+  sortBy = "desc",
+}: {
+  userId: string;
+  searchString?: string;
+  pageNumber?: number;
+  pageSize?: number;
+  sortBy?: 'asc' | 'desc';
+}) {
+  try {
+   const users = await prisma.user.findMany({
+  where: {
+    id: { not: userId },
+    ...(searchString.trim()
+      ? {
+          OR: [
+            { username: { contains: searchString, mode: 'insensitive' } },
+            { name: { contains: searchString, mode: 'insensitive' } },
+          ],
+        }
+      : {}), 
+      },
+  skip: (pageNumber - 1) * pageSize,
+  take: pageSize,
+});
 
+
+    const totalUsersCount = await prisma.user.count({where: {
+        id: { not: userId },
+        OR: searchString
+          ? [
+              { username: { contains: searchString, mode: 'insensitive' } },
+              { name: { contains: searchString, mode: 'insensitive' } },
+            ]
+          : undefined,
+      }});
+
+    
+    const isNext = totalUsersCount > users.length + (pageNumber - 1) * pageSize;
+
+    return { users, isNext }
+    } catch (error:any) {
+    throw new Error(`Failed to fetch users: ${error.message}`)
+  }
+}
+
+
+export async function getActivity(userId: string) {
+  try {
+   
+    const userThreads = await prisma.thread.findMany({
+      where: {
+        authorId: userId,
+      },
+      include: {
+        children: {
+          include: {
+            author: {
+              select: {
+                name: true,
+                image: true,
+                id: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    
+    const replies = userThreads.flatMap((userThread) => userThread.children.filter(child => child.author.id !== userId));
+
+
+    return replies;
+  } catch (error:any) {
+    throw new Error(`Failed to fetch activity: ${error.message}`) 
+  }
+}
