@@ -1,11 +1,15 @@
+"use client";
+
+import { formatDateString } from "@/lib/utils";
 import Image from "next/image";
 import Link from "next/link";
-import React from "react";
+import React, { useState } from "react";
+import Comment from "../forms/Comment";
 
 interface Props {
   id: string;
   currentUserId: string;
-  parentId: string | null;
+  parentId: string;
   content: string;
   author: {
     id: string;
@@ -18,12 +22,14 @@ interface Props {
     id: string;
   } | null;
   createdAt: Date | string;
-  comments: {
+  comments?: {
     author: {
       image: string | null;
     };
+    childComments: any;
   }[];
   isComment?: boolean;
+  isChildComment?: boolean;
 }
 
 const ThreadCard = ({
@@ -36,6 +42,7 @@ const ThreadCard = ({
   createdAt,
   comments,
   isComment,
+  isChildComment,
 }: Props) => {
   const imageLinks = [
     { src: "/heart-gray.svg", alt: "heart", width: 24, height: 24 },
@@ -49,12 +56,33 @@ const ThreadCard = ({
     { src: "/repost.svg", alt: "heart", width: 24, height: 24 },
     { src: "/share.svg", alt: "heart", width: 24, height: 24 },
   ];
+  const [replying, setReplying] = useState(false);
+  const [displayReplies, setDisplayReplies] = useState(0);
+  const displayValue = 3;
+
+  const toggleReplies = () => {
+    if (comments) {
+      if (displayReplies === 0) {
+        setDisplayReplies(displayValue);
+      } else {
+        setDisplayReplies(displayReplies + displayValue);
+      }
+    }
+  };
+
+  const hideReplies = () => {
+    setDisplayReplies(0);
+  };
+
+  const closeReplyForm = () => {
+    setReplying(false);
+  };
 
   return (
     <article
-      className={`flex w-full mb-4 flex-col rounded-xl ${
-        isComment ? "px-0 xs:px-7" : "bg-dark-2 p-7"
-      }`}
+      className={`flex w-full ${
+        !isChildComment && "mb-4"
+      } flex-col rounded-xl ${isComment ? "px-0 xs:px-7" : "bg-dark-2 p-7"}`}
     >
       <div className="flex items-start justify-between">
         <div className="flex w-full flex-1 flex-row gap-4">
@@ -84,19 +112,29 @@ const ThreadCard = ({
 
             <div className="mt-5 flex flex-col gap-3">
               <div className="flex gap-3.5">
-                <p className="mt-2 text-small-regular text-light-2"></p>
                 {imageLinks.map((image, index) => (
                   <React.Fragment key={index}>
                     {image.href ? (
-                      <Link href={image.href}>
+                      !isComment ? (
+                        <Link href={image.href}>
+                          <Image
+                            src={image.src}
+                            alt={image.alt}
+                            height={image.height}
+                            width={image.width}
+                            className="cursor-pointer object-contain hover:brightness-200"
+                          />
+                        </Link>
+                      ) : (
                         <Image
                           src={image.src}
                           alt={image.alt}
                           height={image.height}
                           width={image.width}
                           className="cursor-pointer object-contain hover:brightness-200"
+                          onClick={() => setReplying(!replying)}
                         />
-                      </Link>
+                      )
                     ) : (
                       <Image
                         src={image.src}
@@ -109,14 +147,124 @@ const ThreadCard = ({
                   </React.Fragment>
                 ))}
               </div>
-              {isComment && comments?.length > 0 && (
+              {/* {isComment && comments?.length > 0 && (
                 <Link href={`/thread/${id}`}>
                   <p className="mt-1 text-subtle-medium text-gray-1">
                     {comments.length}
                   </p>
                 </Link>
-              )}
+              )} */}
             </div>
+          </div>
+        </div>
+      </div>
+
+      {!isComment && comments && (
+        <div className="ml-1 mt-3 flex items-center gap-2">
+          {comments
+            .slice(0, 2)
+            .map(
+              (comment, index) =>
+                comment.author.image && (
+                  <Image
+                    key={index}
+                    src={comment.author.image}
+                    alt={`user_${index}`}
+                    width={24}
+                    height={24}
+                    className={`${
+                      index !== 0 && "-ml-5"
+                    } rounded-full object-cover`}
+                  />
+                )
+            )}
+
+          <Link href={`/thread/${id}`}>
+            <p className="mt-1 text-subtle-medium text-gray-1">
+              {comments.length} repl{comments.length > 1 ? "ies" : "y"}
+            </p>
+          </Link>
+        </div>
+      )}
+
+      {!isComment && community && (
+        <Link
+          href={`/communities/${community.id}`}
+          className="mt-5 flex items-center"
+        >
+          <p className="text-subtle-medium text-gray-1">
+            {formatDateString(createdAt)} - {community.name} Community
+          </p>
+
+          {community.image && (
+            <Image
+              src={community.image}
+              alt={community.name}
+              width={14}
+              height={14}
+              className="ml-1 rounded-full object-cover"
+            />
+          )}
+        </Link>
+      )}
+
+      {isComment && replying && (
+        <div className="pl-16">
+          <Comment
+            threadId={id}
+            currentUserId={JSON.stringify(currentUserId)}
+            parentId={parentId}
+            onCloseReplyForm={closeReplyForm}
+          />
+        </div>
+      )}
+
+      <div className="mt-3">
+        {comments?.map(
+          (childthread: any, index) =>
+            index < displayReplies && (
+              <ThreadCard
+                key={childthread?.id}
+                id={id}
+                currentUserId={currentUserId}
+                parentId={childthread?.parentId}
+                content={childthread?.text}
+                author={childthread?.author}
+                community={childthread?.community}
+                createdAt={childthread?.createdAt}
+                isComment
+                isChildComment
+              />
+            )
+        )}
+
+        <div className="flex mt-2">
+          <div className="flex items-center ml-7">
+            {comments && isComment && comments?.length > displayReplies && (
+              <button
+                className="text-light-1 text-small-regular hover:brightness-150"
+                onClick={toggleReplies}
+              >
+                {displayReplies === comments?.length
+                  ? `Hide replies`
+                  : `View ${
+                      displayReplies === 0
+                        ? comments?.length
+                        : comments?.length - displayReplies
+                    } ${displayReplies === 0 ? "replies" : "more replies"}`}
+              </button>
+            )}
+          </div>
+
+          <div className="flex items-center ml-auto">
+            {displayReplies > 0 && (
+              <button
+                className="text-light-1 text-small-regular hover:brightness-150"
+                onClick={hideReplies}
+              >
+                Hide
+              </button>
+            )}
           </div>
         </div>
       </div>

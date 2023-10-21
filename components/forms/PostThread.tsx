@@ -22,6 +22,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { ThreadValidation } from "@/lib/validations/threads";
 import { log } from "console";
 import { createThread } from "@/lib/actions/threads.actions";
+import { useOrganization } from "@clerk/nextjs";
 
 interface Props {
   user: {
@@ -38,6 +39,7 @@ interface Props {
 const PostThread = ({ userId }: { userId: string }) => {
   const router = useRouter();
   const pathname = usePathname();
+  const { organization } = useOrganization();
 
   const form = useForm({
     resolver: zodResolver(ThreadValidation),
@@ -51,7 +53,7 @@ const PostThread = ({ userId }: { userId: string }) => {
     await createThread({
       text: values.thread,
       author: userId,
-      communityId: null,
+      communityId: organization ? organization.id : null,
       path: pathname,
     });
 
@@ -68,9 +70,9 @@ const PostThread = ({ userId }: { userId: string }) => {
           name="thread"
           render={({ field }) => (
             <FormItem className="flex flex-col text-light-2">
-              <FormLabel className="text-base-semibold text-gray-200">
+              {/* <FormLabel className="text-base-semibold text-gray-200">
                 Content
-              </FormLabel>
+              </FormLabel> */}
               <FormControl className="no-focus border border-dark-4 bg-dark-3 text-light-1">
                 <Textarea rows={15} {...field} />
               </FormControl>

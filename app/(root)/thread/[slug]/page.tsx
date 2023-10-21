@@ -23,13 +23,13 @@ const Threads = async ({ params }: { params: { slug: string } }) => {
         <ThreadCard
           key={thread?.id}
           id={thread?.id}
-          currentUserId={user?.id || ""}
+          currentUserId={userInfo?.id}
           parentId={thread?.parentId}
           content={thread?.text}
           author={thread?.author}
           community={thread?.community}
           createdAt={thread?.createdAt}
-          comments={thread?.children}
+          // comments={thread?.children}
         />
       </div>
 
@@ -41,18 +41,18 @@ const Threads = async ({ params }: { params: { slug: string } }) => {
         />
       </div>
 
-      <div className="mt-10">
+      <div className="mt-3">
         {thread.children.map((childthread: any) => (
           <ThreadCard
             key={childthread?.id}
             id={childthread?.id}
-            currentUserId={childthread?.id || ""}
+            currentUserId={userInfo?.id}
             parentId={childthread?.parentId}
             content={childthread?.text}
             author={childthread?.author}
             community={childthread?.community}
             createdAt={childthread?.createdAt}
-            comments={childthread?.children}
+            comments={childthread?.childComments}
             isComment
           />
         ))}

@@ -20,7 +20,7 @@ export default async function Home() {
                 key={thread?.id}
                 id={thread?.id}
                 currentUserId={user?.id || ""}
-                parentId={thread?.parentId}
+                parentId={thread?.parentId || ""}
                 content={thread?.text}
                 author={thread?.author}
                 community={thread?.community}

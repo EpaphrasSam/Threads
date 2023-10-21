@@ -52,58 +52,44 @@ export async function createThread({ text, author, communityId, path }: Params) 
 
 export async function fetchThreads(pageNumber = 1, pageSize = 20) {
   try {
-
     const skipAmount = (pageNumber - 1) * pageSize;
     
     const threads = await prisma.thread.findMany({
-      // where: {
-      //   parentId:  null,
-      // },
+      where: {
+        OR: [
+          { parentId: null },
+          { parentId: { isSet: false } },
+        ]
+      },
       orderBy: {
         createdAt: 'desc',
       },
       skip: skipAmount,
       take: pageSize,
       include: {
-        author: {
-          select: {
-            id: true,
-            name: true,
-            image: true,
-           
-          },
-        },
+        author: true,
         community: true,
         children: {
           include: {
-            author: {
-              select: {
-                id: true,
-                name: true,
-                image: true,
-                threads: {
-                    select: {
-                      parentId: true
-                    },
-                  }, 
+            author: true,
+            childComments: {
+              include: {
+                author: true,
+              },
             },
+          },
         },
-    },
-},
       },
     });
-
-  
-    
 
     const totalPostsCount = await prisma.thread.count({
       where: {
-        parentId:  null 
+        OR: [
+          { parentId: null },
+          { parentId: { isSet: false } },
+        ]
       },
     });
-
-    
-    
 
     const isNext = totalPostsCount > skipAmount + threads.length;
 
@@ -118,27 +104,20 @@ export async function fetchThreadById(threadId: string) {
     const thread = await prisma.thread.findUnique({
       where: { id: threadId },
       include: {
-        author: {
-          select: {
-            id: true,
-            name: true,
-            image: true,
-          },
-        },
-        community: {
-          select: {
-            id: true,
-            name: true,
-            image: true,
-          },
-        },
+        author: true,
+        community: true,
         children: {
+          where: { OR: [
+          { parentCommentId: null },
+          { parentCommentId: { isSet: false } },
+        ] },
+          orderBy: { createdAt: 'asc' },
           include: {
-            author: {
-              select: {
-                id: true,
-                name: true,
-                image: true,
+            author: true,
+            childComments: {
+              orderBy: { createdAt: 'asc' },
+              include: {
+                author: true,
               },
             },
           },
@@ -147,13 +126,12 @@ export async function fetchThreadById(threadId: string) {
     });
 
     return thread;
-  } catch (err:any) {
-    throw new Error("Error while fetching thread:", err);
-    
+  } catch (err) {
+    throw new Error(`Error while fetching thread: ${err}`);
   }
 }
 
-export async function addCommentToThread(threadId:string, commentText:string, userId:string, path:string) {
+export async function addCommentToThread(threadId:string, commentText:string, userId:string, path:string, parentCommentId?: string) {
   try {
     const originalThread = await prisma.thread.findUnique({
       where: { id: threadId },
@@ -163,20 +141,28 @@ export async function addCommentToThread(threadId:string, commentText:string, us
       throw new Error('Thread not found');
     }
 
-    const savedCommentThread = await prisma.thread.create({
-      data: {
-        text: commentText,
-        author: {
-          connect: { id: userId },
-        },
-        parent: {
-          connect: { id: threadId },
-        },
+    const commentData: any = {
+      text: commentText,
+      author: {
+        connect: { id: userId },
       },
+      parent: {
+          connect: { id: parentCommentId ? parentCommentId : threadId },
+        },
+    };
+
+    if(parentCommentId){
+       commentData.parentComment = {
+        connect: { id: threadId },
+      }
+    }
+    
+    const savedCommentThread = await prisma.thread.create({
+      data: commentData,
     });
 
     await prisma.thread.update({
-      where: { id: threadId },
+      where: { id: parentCommentId ? parentCommentId : threadId },
       data: {
         children: {
           connect: { id: savedCommentThread.id },
@@ -187,5 +173,42 @@ export async function addCommentToThread(threadId:string, commentText:string, us
     revalidatePath(path);
   } catch (error:any) {
     throw new Error(`Error adding comment to thread: ${error.message}`)
+  }
+}
+
+export async function countTotalThreads(id: string, condition: 'user' | 'community'): Promise<number> {
+  try {
+    if (condition === 'user') {
+      const user = await prisma.user.findUnique({
+        where: {
+          id,
+        },
+        include: {
+          threads: true,
+        },
+      });
+      if (!user) {
+        throw new Error('User not found');
+      }
+      return user.threads.length;
+    } else if (condition === 'community') {
+      const community = await prisma.community.findUnique({
+        where: {
+          id,
+        },
+        include: {
+          threads: true,
+        },
+      });
+      if (!community) {
+        throw new Error('Community not found');
+      }
+      return community.threads.length;
+    } else {
+      throw new Error('Invalid condition. Use "user" or "community".');
+    }
+  } catch (error) {
+    console.error('Error counting total threads:', error);
+    throw error;
   }
 }

@@ -126,7 +126,8 @@ export async function fetchCommunities({
   try {
     const skipAmount = (pageNumber - 1) * pageSize;
 
-    const query: any = {
+
+    const communities = await prisma.community.findMany({
       where: {
         ...(searchString.trim() !== '' ? {
           OR: [
@@ -160,11 +161,29 @@ export async function fetchCommunities({
           },
         },
       },
-    };
+    });
 
-    const communities = await prisma.community.findMany(query);
+    const totalCommunitiesCount = await prisma.community.count({
+  where: {
+    ...(searchString.trim() !== '' ? {
+      OR: [
+        {
+          username: {
+            contains: searchString,
+            mode: 'insensitive',
+          },
+        },
+        {
+          name: {
+            contains: searchString,
+            mode: 'insensitive',
+          },
+        },
+      ],
+    } : {}),
+  },
+});
 
-    const totalCommunitiesCount = await prisma.community.count(query);
 
     const isNext = totalCommunitiesCount > skipAmount + communities.length;
 

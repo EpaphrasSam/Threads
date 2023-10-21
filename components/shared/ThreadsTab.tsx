@@ -2,6 +2,7 @@ import { fetchUserPosts } from "@/lib/actions/user.actions";
 import { redirect } from "next/navigation";
 import React from "react";
 import ThreadCard from "../cards/ThreadCard";
+import { fetchCommunityPosts } from "@/lib/actions/community.actions";
 
 interface Props {
   currentUserId: string;
@@ -10,13 +11,19 @@ interface Props {
 }
 
 const ThreadsTab = async ({ currentUserId, accountId, accountType }: Props) => {
-  const { threads }: any = await fetchUserPosts(accountId);
+  let threads;
 
-  if (!threads) redirect("/");
+  if (accountType === "Community") {
+    const results = await fetchCommunityPosts(accountId);
+    threads = results?.threads;
+  } else {
+    const results = await fetchUserPosts(accountId);
+    threads = results?.threads;
+  }
 
   return (
     <section className="mt-9 flex flex-col gap-10">
-      {threads.map((thread: any) => (
+      {threads?.map((thread: any) => (
         <ThreadCard
           key={thread?.id}
           id={thread?.id}

@@ -26,11 +26,19 @@ import { Textarea } from "../ui/textarea";
 
 interface Props {
   threadId: string;
-  currentUserImg: string | null;
+  currentUserImg?: string | null;
   currentUserId: string;
+  parentId?: string;
+  onCloseReplyForm: () => void;
 }
 
-const Comment = ({ threadId, currentUserId, currentUserImg }: Props) => {
+const Comment = ({
+  threadId,
+  currentUserId,
+  currentUserImg,
+  parentId,
+  onCloseReplyForm,
+}: Props) => {
   const router = useRouter();
   const pathname = usePathname();
 
@@ -46,10 +54,11 @@ const Comment = ({ threadId, currentUserId, currentUserImg }: Props) => {
       threadId,
       values.thread,
       JSON.parse(currentUserId),
-      pathname
+      pathname,
+      parentId
     );
-
     form.reset();
+    onCloseReplyForm();
   };
 
   return (

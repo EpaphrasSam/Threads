@@ -70,9 +70,12 @@ export async function fetchUserPosts(userId: string) {
   },
   include: {
     threads: {
-      // where: {
-      //   parentId: null 
-      // },
+      where: {
+           OR: [
+      { parentId: null },
+      { parentId: { isSet: false } },
+    ]
+      },
       include: {
         author: {
           select: {

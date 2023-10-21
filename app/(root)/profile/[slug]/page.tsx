@@ -7,6 +7,7 @@ import { Tabs, TabsTrigger, TabsList, TabsContent } from "@/components/ui/tabs";
 import { profileTabs } from "@/constants";
 import Image from "next/image";
 import ThreadsTab from "@/components/shared/ThreadsTab";
+import { countTotalThreads } from "@/lib/actions/threads.actions";
 
 const Profile = async ({ params }: { params: { slug: string } }) => {
   const user = await currentUser();
@@ -14,6 +15,8 @@ const Profile = async ({ params }: { params: { slug: string } }) => {
   if (!user) return null;
 
   const userInfo = await fetchUser(params.slug);
+
+  const totalThreads: number = await countTotalThreads(params.slug, "user");
 
   if (!userInfo?.onboarded) redirect("/onboarding");
   return (
@@ -43,7 +46,7 @@ const Profile = async ({ params }: { params: { slug: string } }) => {
 
                 {tab.label === "Threads" && (
                   <p className="ml-1 rounded-sm bg-light-4 px-2 py-1 !text-tiny-medium text-light-2">
-                    {/* {userInfo.threads.length} */}
+                    {totalThreads}
                   </p>
                 )}
               </TabsTrigger>

@@ -41,7 +41,7 @@ const Activity = async () => {
         </>
       ) : (
         <div className="flex items-center justify-center">
-          <p className="!text-base-regular text-light-3">No activtiy found</p>
+          <p className="!text-base-regular text-light-3">No activity found</p>
         </div>
       )}
     </section>

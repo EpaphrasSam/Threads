@@ -31,6 +31,9 @@ model Thread {
   parent      Thread?    @relation("Children", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   parentId    String? 
   children    Thread[]   @relation("Children")
+  childComments   Thread[] @relation("Replies")
+  parentComment   Thread?  @relation("Replies", fields: [parentCommentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  parentCommentId String?
 }
 
 model Community {
