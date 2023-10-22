@@ -184,7 +184,14 @@ export async function countTotalThreads(id: string, condition: 'user' | 'communi
           id,
         },
         include: {
-          threads: true,
+          threads: {
+            where:{
+               OR: [
+          { parentId: null },
+          { parentId: { isSet: false } },
+        ]
+            }
+          },
         },
       });
       if (!user) {

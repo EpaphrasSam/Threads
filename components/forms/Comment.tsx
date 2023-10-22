@@ -29,7 +29,7 @@ interface Props {
   currentUserImg?: string | null;
   currentUserId: string;
   parentId?: string;
-  onCloseReplyForm: () => void;
+  onCloseReplyForm?: () => void;
 }
 
 const Comment = ({
@@ -58,7 +58,8 @@ const Comment = ({
       parentId
     );
     form.reset();
-    onCloseReplyForm();
+
+    onCloseReplyForm && onCloseReplyForm();
   };
 
   return (

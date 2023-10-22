@@ -5,6 +5,13 @@ import Image from "next/image";
 import Link from "next/link";
 import React, { useState } from "react";
 import Comment from "../forms/Comment";
+import { usePathname } from "next/navigation";
+import useSWR from "swr";
+import {
+  LikesCount,
+  UserLikesCheck,
+  likeThreadOrComment,
+} from "@/lib/actions/like.action";
 
 interface Props {
   id: string;
@@ -44,21 +51,57 @@ const ThreadCard = ({
   isComment,
   isChildComment,
 }: Props) => {
-  const imageLinks = [
-    { src: "/heart-gray.svg", alt: "heart", width: 24, height: 24 },
-    {
-      src: "/reply.svg",
-      alt: "heart",
-      width: 24,
-      height: 24,
-      href: `/thread/${id}`,
-    },
-    { src: "/repost.svg", alt: "heart", width: 24, height: 24 },
-    { src: "/share.svg", alt: "heart", width: 24, height: 24 },
-  ];
+  const pathname = usePathname();
+  const isHome = pathname === "/";
+
   const [replying, setReplying] = useState(false);
   const [displayReplies, setDisplayReplies] = useState(0);
   const displayValue = 3;
+
+  const { data, mutate } = useSWR(
+    ["likes", currentUserId, id, pathname],
+    async (key) => {
+      const [likesCount, isLiked] = await Promise.all([
+        LikesCount(key[2]),
+        UserLikesCheck(key[1], key[2]),
+      ]);
+
+      return { likesCount, isLiked };
+    }
+  );
+
+  const heartIconSrc = data?.isLiked ? "/heart-filled.svg" : "/heart-gray.svg";
+
+  const imageLinks = [
+    { src: heartIconSrc, alt: "heart", width: 24, height: 24 },
+    ...(isChildComment
+      ? []
+      : [
+          {
+            src: "/reply.svg",
+            alt: "heart",
+            width: 24,
+            height: 24,
+            href: `/thread/${id}`,
+          },
+        ]),
+    ...(isComment
+      ? []
+      : [
+          { src: "/repost.svg", alt: "repost", width: 24, height: 24 },
+          { src: "/share.svg", alt: "share", width: 24, height: 24 },
+        ]),
+  ];
+
+  const handleLikeClick = async () => {
+    try {
+      await likeThreadOrComment(currentUserId, id, pathname);
+    } catch (error) {
+      console.error("Error liking/unliking:", error);
+    } finally {
+      mutate();
+    }
+  };
 
   const toggleReplies = () => {
     if (comments) {
@@ -116,7 +159,10 @@ const ThreadCard = ({
                   <React.Fragment key={index}>
                     {image.href ? (
                       !isComment ? (
-                        <Link href={image.href}>
+                        <Link
+                          href={image.href}
+                          className="flex flex-row gap-1 hover:brightness-200"
+                        >
                           <Image
                             src={image.src}
                             alt={image.alt}
@@ -124,42 +170,47 @@ const ThreadCard = ({
                             width={image.width}
                             className="cursor-pointer object-contain hover:brightness-200"
                           />
+                          <p className="text-gray-500">{comments?.length}</p>
                         </Link>
                       ) : (
+                        <div className="flex flex-row gap-1">
+                          <Image
+                            src={image.src}
+                            alt={image.alt}
+                            height={image.height}
+                            width={image.width}
+                            className="cursor-pointer object-contain hover:brightness-200"
+                            onClick={() => setReplying(!replying)}
+                          />
+                          <p className="text-gray-500">{comments?.length}</p>
+                        </div>
+                      )
+                    ) : (
+                      <div className="flex flex-row gap-1">
                         <Image
                           src={image.src}
                           alt={image.alt}
                           height={image.height}
                           width={image.width}
                           className="cursor-pointer object-contain hover:brightness-200"
-                          onClick={() => setReplying(!replying)}
+                          onClick={
+                            image.alt === "heart" ? handleLikeClick : undefined
+                          }
                         />
-                      )
-                    ) : (
-                      <Image
-                        src={image.src}
-                        alt={image.alt}
-                        height={image.height}
-                        width={image.width}
-                        className="cursor-pointer object-contain hover:brightness-200"
-                      />
+                        {image.alt === "heart" && (
+                          <p className="text-gray-500">{data?.likesCount}</p>
+                        )}
+                      </div>
                     )}
                   </React.Fragment>
                 ))}
               </div>
-              {/* {isComment && comments?.length > 0 && (
-                <Link href={`/thread/${id}`}>
-                  <p className="mt-1 text-subtle-medium text-gray-1">
-                    {comments.length}
-                  </p>
-                </Link>
-              )} */}
             </div>
           </div>
         </div>
       </div>
 
-      {!isComment && comments && (
+      {!isComment && isHome && comments && (
         <div className="ml-1 mt-3 flex items-center gap-2">
           {comments
             .slice(0, 2)

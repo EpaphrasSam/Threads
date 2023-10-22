@@ -29,7 +29,7 @@ const Threads = async ({ params }: { params: { slug: string } }) => {
           author={thread?.author}
           community={thread?.community}
           createdAt={thread?.createdAt}
-          // comments={thread?.children}
+          comments={thread?.children}
         />
       </div>
 
