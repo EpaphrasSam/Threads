@@ -62,8 +62,6 @@ export async function fetchUser(userId: string) {
 
 export async function fetchUserPosts(userId: string) {
   try {
-
-    
    const threads = await prisma.user.findUnique({
   where: {
     id: userId,
@@ -106,10 +104,6 @@ export async function fetchUserPosts(userId: string) {
     },
   },
 });
-
-
-  
-    
 
     return threads;
   } catch (error:any) {

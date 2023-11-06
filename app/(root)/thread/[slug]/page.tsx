@@ -15,7 +15,7 @@ const Threads = async ({ params }: { params: { slug: string } }) => {
   const userInfo = await fetchUser(user.id);
   if (!userInfo?.onboarded) redirect("/onboarding");
 
-  const thread: any = await fetchThreadById(params.slug);
+  const thread: any = await fetchThreadById(params.slug, userInfo.id);
 
   return (
     <section className="relative">
@@ -30,6 +30,8 @@ const Threads = async ({ params }: { params: { slug: string } }) => {
           community={thread?.community}
           createdAt={thread?.createdAt}
           comments={thread?.children}
+          likesCount={thread?.likesCount}
+          userLikes={thread?.userLikes}
         />
       </div>
 
@@ -53,6 +55,8 @@ const Threads = async ({ params }: { params: { slug: string } }) => {
             community={childthread?.community}
             createdAt={childthread?.createdAt}
             comments={childthread?.childComments}
+            likesCount={childthread?.likesCount}
+            userLikes={childthread?.userLikes}
             isComment
           />
         ))}

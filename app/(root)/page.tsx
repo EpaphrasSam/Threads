@@ -3,8 +3,10 @@ import { fetchThreads } from "@/lib/actions/threads.actions";
 import { UserButton, currentUser } from "@clerk/nextjs";
 
 export default async function Home() {
-  const { threads, isNext } = await fetchThreads();
   const user = await currentUser();
+  const { threads, isNext } = await fetchThreads(1, 20, user ? user?.id : "");
+
+  // console.log(threads[1].children);
 
   return (
     <div>
@@ -26,6 +28,8 @@ export default async function Home() {
                 community={thread?.community}
                 createdAt={thread?.createdAt}
                 comments={thread?.children}
+                likesCount={thread?.likesCount}
+                userLikes={thread?.userLikes}
               />
             ))}
           </>

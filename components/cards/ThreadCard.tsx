@@ -37,6 +37,8 @@ interface Props {
   }[];
   isComment?: boolean;
   isChildComment?: boolean;
+  likesCount: number;
+  userLikes: boolean;
 }
 
 const ThreadCard = ({
@@ -50,6 +52,8 @@ const ThreadCard = ({
   comments,
   isComment,
   isChildComment,
+  likesCount,
+  userLikes,
 }: Props) => {
   const pathname = usePathname();
   const isHome = pathname === "/";
@@ -58,19 +62,7 @@ const ThreadCard = ({
   const [displayReplies, setDisplayReplies] = useState(0);
   const displayValue = 3;
 
-  const { data, mutate } = useSWR(
-    ["likes", currentUserId, id, pathname],
-    async (key) => {
-      const [likesCount, isLiked] = await Promise.all([
-        LikesCount(key[2]),
-        UserLikesCheck(key[1], key[2]),
-      ]);
-
-      return { likesCount, isLiked };
-    }
-  );
-
-  const heartIconSrc = data?.isLiked ? "/heart-filled.svg" : "/heart-gray.svg";
+  const heartIconSrc = userLikes ? "/heart-filled.svg" : "/heart-gray.svg";
 
   const imageLinks = [
     { src: heartIconSrc, alt: "heart", width: 24, height: 24 },
@@ -98,8 +90,6 @@ const ThreadCard = ({
       await likeThreadOrComment(currentUserId, id, pathname);
     } catch (error) {
       console.error("Error liking/unliking:", error);
-    } finally {
-      mutate();
     }
   };
 
@@ -198,7 +188,7 @@ const ThreadCard = ({
                           }
                         />
                         {image.alt === "heart" && (
-                          <p className="text-gray-500">{data?.likesCount}</p>
+                          <p className="text-gray-500">{likesCount}</p>
                         )}
                       </div>
                     )}
@@ -283,6 +273,8 @@ const ThreadCard = ({
                 author={childthread?.author}
                 community={childthread?.community}
                 createdAt={childthread?.createdAt}
+                likesCount={childthread?.likesCount}
+                userLikes={childthread?.userLikes}
                 isComment
                 isChildComment
               />

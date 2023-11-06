@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import prisma from "../prisma"
+import { LikesCount, UserLikesCheck } from "./like.action";
 
 interface Params {
     text: string,
@@ -50,19 +51,19 @@ export async function createThread({ text, author, communityId, path }: Params) 
   }
 }
 
-export async function fetchThreads(pageNumber = 1, pageSize = 20) {
+export async function fetchThreads(pageNumber = 1, pageSize = 20, currentUserId:string) {
   try {
     const skipAmount = (pageNumber - 1) * pageSize;
-    
+
     const threads = await prisma.thread.findMany({
       where: {
         OR: [
           { parentId: null },
           { parentId: { isSet: false } },
-        ]
+        ],
       },
       orderBy: {
-        createdAt: 'desc',
+        createdAt: "desc",
       },
       skip: skipAmount,
       take: pageSize,
@@ -70,6 +71,12 @@ export async function fetchThreads(pageNumber = 1, pageSize = 20) {
         author: true,
         community: true,
         children: {
+          where: {
+        OR: [
+          { parentCommentId: null },
+          { parentCommentId: { isSet: false } },
+        ],
+      },
           include: {
             author: true,
             childComments: {
@@ -82,24 +89,41 @@ export async function fetchThreads(pageNumber = 1, pageSize = 20) {
       },
     });
 
+    
+    const threadInfoPromises = threads.map(async (thread) => {
+      const threadId = thread.id;
+      const [likesCount, userLikes] = await Promise.all([
+        LikesCount(threadId),
+        UserLikesCheck(currentUserId, threadId),
+      ]);
+      return {
+        ...thread,
+        likesCount,
+        userLikes,
+      };
+    });
+
+    const threadsInfo = await Promise.all(threadInfoPromises);
+
     const totalPostsCount = await prisma.thread.count({
       where: {
         OR: [
           { parentId: null },
           { parentId: { isSet: false } },
-        ]
+        ],
       },
     });
 
     const isNext = totalPostsCount > skipAmount + threads.length;
 
-    return { threads, isNext };
+    return { threads: threadsInfo, isNext };
   } catch (error: any) {
     throw new Error(`Failed to fetch threads: ${error.message}`);
   }
 }
 
-export async function fetchThreadById(threadId: string) {
+
+export async function fetchThreadById(threadId: string, currentUserId: string) {
   try {
     const thread = await prisma.thread.findUnique({
       where: { id: threadId },
@@ -107,29 +131,73 @@ export async function fetchThreadById(threadId: string) {
         author: true,
         community: true,
         children: {
-          where: { OR: [
-          { parentCommentId: null },
-          { parentCommentId: { isSet: false } },
-        ] },
-          orderBy: { createdAt: 'asc' },
+          where: {
+            OR: [
+              { parentCommentId: null },
+              { parentCommentId: { isSet: false } },
+            ],
+          },
+          orderBy: { createdAt: "asc" },
           include: {
             author: true,
             childComments: {
-              orderBy: { createdAt: 'asc' },
+              orderBy: { createdAt: "asc" },
               include: {
                 author: true,
+                likes: {
+                  where: {
+                    userId: currentUserId,
+                  },
+                },
+              },
+            },
+            likes: {
+              where: {
+                userId: currentUserId,
               },
             },
           },
         },
+        likes: {
+          where: {
+            userId: currentUserId,
+          },
+        },
       },
     });
+
+    if (!thread) {
+      return null;
+    }
+
+    
+    const addLikesInfo = (obj:any) => {
+      obj.likesCount = obj.likes.length;
+      obj.userLikes = obj.likes.length > 0;
+
+      if (obj.children) {
+        for (const comment of obj.children) {
+          comment.likesCount = comment.likes.length;
+          comment.userLikes = comment.likes.length > 0;
+
+          if (comment.childComments) {
+            for (const childComment of comment.childComments) {
+              childComment.likesCount = childComment.likes.length;
+              childComment.userLikes = childComment.likes.length > 0;
+            }
+          }
+        }
+      }
+    };
+
+    addLikesInfo(thread);
 
     return thread;
   } catch (err) {
     throw new Error(`Error while fetching thread: ${err}`);
   }
 }
+
 
 export async function addCommentToThread(threadId:string, commentText:string, userId:string, path:string, parentCommentId?: string) {
   try {
