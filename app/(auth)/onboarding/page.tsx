@@ -17,10 +17,8 @@ const Onboarding = async () => {
     username: (userInfo ? userInfo?.username : user.username) || "",
     name: userInfo ? userInfo?.name : user.firstName ?? "",
     bio: (userInfo ? userInfo?.bio : "") || "",
-    image: (userInfo ? userInfo?.image : user.imageUrl) || null,
+    image: (userInfo ? userInfo?.image : user.imageUrl) || "",
   };
-
-  console.log(userData);
 
   return (
     <main className="mx-auto flex max-w-3xl flex-col justify-start px-10 py-20">
